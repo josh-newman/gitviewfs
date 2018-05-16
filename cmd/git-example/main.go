@@ -7,6 +7,9 @@ import (
 	"io"
 	"fmt"
 	"os"
+	"gopkg.in/src-d/go-git.v4/plumbing"
+	"gopkg.in/src-d/go-git.v4/plumbing/object"
+	"gopkg.in/src-d/go-git.v4/plumbing/filemode"
 )
 
 func main() {
@@ -35,6 +38,48 @@ func main() {
 			log.Fatal(errors.Wrap(err, "next branch failed"))
 		}
 
-		fmt.Println(branchRef)
+		branchCommit, err := repo.CommitObject(branchRef.Hash())
+		if err == plumbing.ErrObjectNotFound {
+			log.Fatalf("Branch %s points to invalid or non-commit ref %s", branchRef.Name(), branchRef.Hash())
+		} else if err != nil {
+			log.Fatal(errors.Wrap(err, "find branch commit failed"))
+		}
+
+		branchTree, err := branchCommit.Tree()
+		if err != nil {
+			log.Fatal(errors.Wrap(err, "find branch tree failed"))
+		}
+
+		walker := object.NewTreeWalker(branchTree, true, map[plumbing.Hash]bool{})
+		for {
+			path, entry, err := walker.Next()
+			if err == io.EOF {
+				break
+			} else if err != nil {
+				log.Fatal(errors.Wrap(err, "tree walking failed"))
+			}
+
+			fmt.Printf("%s %s: %s\n", branchRef.Name(), path, getDisplayName(entry))
+		}
 	}
+}
+
+func getDisplayName(entry object.TreeEntry) string {
+	switch entry.Mode {
+	case filemode.Empty:
+		return fmt.Sprintf("%s [0]", entry.Name)
+	case filemode.Dir:
+		return fmt.Sprintf("%s/", entry.Name)
+	case filemode.Regular, filemode.Deprecated:
+		return fmt.Sprintf("%s [%s]", entry.Name, entry.Hash.String())
+	case filemode.Executable:
+		return fmt.Sprintf("%s [* %s]", entry.Name, entry.Hash.String())
+	case filemode.Symlink:
+		return fmt.Sprintf("%s [->]", entry.Name)
+	case filemode.Submodule:
+		return fmt.Sprintf("%s [@]", entry.Name)
+	}
+
+	log.Fatalf("Unrecognized mode %s for tree entry: %s", entry.Mode, entry.Hash)
+	panic("unreachable")
 }
