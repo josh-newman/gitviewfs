@@ -10,6 +10,8 @@ import (
 	"gopkg.in/src-d/go-git.v4/plumbing"
 	"gopkg.in/src-d/go-git.v4/plumbing/object"
 	"gopkg.in/src-d/go-git.v4/plumbing/filemode"
+	"strings"
+	"path"
 )
 
 func main() {
@@ -51,15 +53,22 @@ func main() {
 		}
 
 		walker := object.NewTreeWalker(branchTree, true, map[plumbing.Hash]bool{})
+		fmt.Println(branchRef.Name())
 		for {
-			path, entry, err := walker.Next()
+			entryPath, entry, err := walker.Next()
 			if err == io.EOF {
 				break
 			} else if err != nil {
 				log.Fatal(errors.Wrap(err, "tree walking failed"))
 			}
 
-			fmt.Printf("%s %s: %s\n", branchRef.Name(), path, getDisplayName(entry))
+			dirPath, _ := path.Split(entryPath)
+			var dirDepth int
+			if len(dirPath) > 0 {
+				dirDepth = len(strings.Split(path.Clean(dirPath), "/"))
+			}
+			dirPadding := strings.Repeat("|  ", dirDepth)
+			fmt.Printf("  %s|- %s\n", dirPadding, getDisplayName(entry))
 		}
 	}
 }
