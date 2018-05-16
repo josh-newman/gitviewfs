@@ -6,10 +6,14 @@ import (
 	"github.com/pkg/errors"
 	"io"
 	"fmt"
+	"os"
 )
 
 func main() {
-	repoPath := "/tmp/git-test"
+	if len(os.Args) != 2 {
+		log.Fatal("Expected exactly one argument: /path/to/git/repository")
+	}
+	repoPath := os.Args[1]
 
 	repo, err := git.PlainOpen(repoPath)
 	if err == git.ErrRepositoryNotExists {
