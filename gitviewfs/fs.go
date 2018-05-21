@@ -117,7 +117,34 @@ func (f *gitviewfs) OpenDir(name string, context *fuse.Context) ([]fuse.DirEntry
 }
 
 func (f *gitviewfs) Open(name string, flags uint32, context *fuse.Context) (nodefs.File, fuse.Status) {
-	return nil, fuse.ENOSYS
+	node, ferr := f.findNode(name)
+	if ferr != nil {
+		if ferr.UnexpectedErr != nil {
+			f.logger.Printf("unexpected error: %s", ferr.UnexpectedErr)
+		}
+		return nil, ferr.Status
+	}
+
+	fileNode, ok := node.(fstree.FileNode)
+	if !ok {
+		return nil, fuse.EINVAL
+	}
+
+	// TODO(josh-newman): Read efficiently instead of copying the whole file into memory.
+	reader, err := fileNode.File().Reader()
+	if err != nil {
+		f.logger.Printf("error creating file reader: %s", err)
+		return nil, fuse.EIO
+	}
+	defer reader.Close()
+
+	bytes, err := ioutil.ReadAll(reader)
+	if err != nil {
+		f.logger.Printf("error reading file: %s", err)
+		return nil, fuse.EIO
+	}
+
+	return nodefs.NewDataFile(bytes), fuse.OK
 }
 
 func (f *gitviewfs) findNode(name string) (fstree.Node, *fserror.Error) {
