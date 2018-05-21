@@ -4,29 +4,31 @@ import (
 	"gopkg.in/src-d/go-git.v4"
 	"github.com/hanwen/go-fuse/fuse/pathfs"
 	"github.com/hanwen/go-fuse/fuse"
-	"gopkg.in/src-d/go-git.v4/plumbing/object"
 	"log"
-	"github.com/pkg/errors"
-	"io"
 	"strings"
-	"gopkg.in/src-d/go-git.v4/plumbing"
-	"gopkg.in/src-d/go-git.v4/plumbing/filemode"
 	"io/ioutil"
 	"os"
+	"github.com/josh-newman/git-view-fs/gitviewfs/internal/gitfstree"
+	"github.com/josh-newman/git-view-fs/gitviewfs/internal/fstree"
 )
 
 type gitviewfs struct {
 	pathfs.FileSystem
-	repo *git.Repository
+	fstree fstree.Node
 	logger *log.Logger
 }
 
-func New(repo *git.Repository) pathfs.FileSystem {
+func New(repo *git.Repository) (pathfs.FileSystem, error) {
+	tree, err := gitfstree.New(repo)
+	if err != nil {
+		return nil, err
+	}
+
 	return &gitviewfs{
 		FileSystem: pathfs.NewDefaultFileSystem(),
-		repo: repo,
+		fstree: tree,
 		logger: log.New(ioutil.Discard, "gitviewfs", log.Ldate | log.Ltime | log.Lmicroseconds | log.Lshortfile | log.LUTC),
-	}
+	}, nil
 }
 
 func (f *gitviewfs) String() string {
@@ -43,89 +45,39 @@ func (f *gitviewfs) SetDebug(debug bool) {
 }
 
 func (f *gitviewfs) GetAttr(name string, context *fuse.Context) (*fuse.Attr, fuse.Status) {
-	tree, entry, ferr := f.findTreeEntry(name)
-	if ferr != nil {
-		log.Print(ferr.unexpectedErr)
-		return nil, ferr.status
+	node := f.fstree
+	for _, part := range strings.Split(name, "/") {
+		if dirNode, ok := node.(fstree.DirNode); ok {
+			children, ferr := dirNode.Children()
+			if ferr != nil {
+				f.logger.Printf("unexpected error: %s", ferr.UnexpectedErr)
+				return nil, ferr.Status
+			}
+
+			if child, ok := children[part]; !ok {
+				return nil, fuse.ENOENT
+			} else {
+				node = child
+			}
+		} else {
+			return nil, fuse.ENOENT
+		}
 	}
 
 	var attr fuse.Attr
-	switch entry.Mode {
-	case filemode.Dir:
+	switch n := node.(type) {
+	case fstree.DirNode:
 		attr.Mode = fuse.S_IFDIR | 0555
-	case filemode.Regular:
+	case fstree.FileNode:
 		attr.Mode = fuse.S_IFREG | 0444
-		file, err := tree.TreeEntryFile(entry)
-		if err != nil {
-			log.Print(err)
-			return nil, fuse.EIO
+		if n.Executable() {
+			attr.Mode |= 0111
 		}
-		attr.Size = uint64(file.Size)
+		attr.Size = uint64(n.Size())
 	default:
-		log.Printf("skipping file with mode: %s", entry.Mode)
+		log.Printf("skipping node: %v", node)
 		return nil, fuse.ENOENT
 	}
 
 	return &attr, fuse.OK
-}
-
-// chooseBranchTree inspects a path and returns a tree entry from the corresponding branch
-// corresponding to path. Returns fuse.OK on success or an error code on failure.
-func (f *gitviewfs) findTreeEntry(path string) (*object.Tree, *object.TreeEntry, *fsError) {
-	branchRefs, err := f.repo.Branches()
-	if err != nil {
-		return nil, nil, newUnexpectedFsError(errors.Wrap(err, "list branches failed"))
-	}
-
-	for {
-		branchRef, err := branchRefs.Next()
-		if err == io.EOF {
-			break
-		} else if err != nil {
-			return nil, nil, newUnexpectedFsError(errors.Wrap(err, "next branch failed"))
-		}
-
-		splitPath := strings.Split(path, "/")
-		branchPath := strings.Split(string(branchRef.Name()), "/")
-		if isPrefixSlice(branchPath, splitPath) {
-			branchCommit, err := f.repo.CommitObject(branchRef.Hash())
-			if err == plumbing.ErrObjectNotFound {
-				return nil, nil, newUnexpectedFsError(errors.Errorf("Branch %s points to invalid or non-commit ref %s", branchRef.Name(), branchRef.Hash()))
-			} else if err != nil {
-				return nil, nil, newUnexpectedFsError(errors.Wrap(err, "find branch commit failed"))
-			}
-
-			branchTree, err := branchCommit.Tree()
-			if err != nil {
-				return nil, nil, newUnexpectedFsError(errors.Wrap(err, "find branch tree failed"))
-			}
-
-			remainingPath := splitPath[len(branchPath):]
-			entry, err := branchTree.FindEntry(strings.Join(remainingPath, "/"))
-			if err == object.ErrDirectoryNotFound {
-				return nil, nil, newNormalFsError(fuse.ENOENT)
-			} else if err != nil {
-				return nil, nil, newUnexpectedFsError(errors.Wrap(err, "choosePathTree failed"))
-			}
-
-			return branchTree, entry, nil
-		}
-	}
-
-	// No matching branch found.
-	return nil, nil, newNormalFsError(fuse.ENOENT)
-}
-
-// isPrefixSlice returns true if maybePrefix is a prefix of other, according to comparing
-// corresponding slice elements.
-func isPrefixSlice(maybePrefix, other []string) bool {
-	if len(maybePrefix) > len(other) {
-		return false
-	}
-	for i, p := range maybePrefix {
-		if p != other[i] {
-			return false
-		}
-	}
-	return true
 }
