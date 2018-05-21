@@ -32,6 +32,7 @@ func main() {
 	if err != nil {
 		log.Fatal(errors.Wrap(err, "create gitviewfs failed"))
 	}
+	gfs.SetDebug(*debug)
 
 	nfs := pathfs.NewPathNodeFs(gfs, &pathfs.PathNodeFsOptions{Debug: *debug})
 	connector := nodefs.NewFileSystemConnector(nfs.Root(), &nodefs.Options{Debug: *debug})
