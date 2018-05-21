@@ -9,6 +9,9 @@ import (
 	"gopkg.in/src-d/go-git.v4/plumbing/object"
 	"strings"
 	"gopkg.in/src-d/go-git.v4/plumbing"
+	"gopkg.in/src-d/go-git.v4/plumbing/filemode"
+	"fmt"
+	"os"
 )
 
 func New(repo *git.Repository) (fstree.Node, error) {
@@ -63,7 +66,7 @@ func (n *branchesNode) Children() (map[string]fstree.Node, *fserror.Error) {
 				return nil, fserror.Unexpected(errors.Wrap(err, "find branch tree failed"))
 			}
 
-			children[entry.nameParts[0]] = &treeNode{tree: branchTree}
+			children[entry.nameParts[0]] = &treeNode{repo: n.repo, tree: branchTree}
 
 		default:
 			var child *branchesNode
@@ -84,15 +87,42 @@ func (n *branchesNode) Children() (map[string]fstree.Node, *fserror.Error) {
 	return children, nil
 }
 
-// TODO(josh-newman): Real implementation.
 type treeNode struct {
+	repo *git.Repository
 	tree *object.Tree
 }
 
-func (n *treeNode) Size() uint64 {
-	return 0
+func (n *treeNode) Children() (map[string]fstree.Node, *fserror.Error) {
+	children := map[string]fstree.Node{}
+	for i := range n.tree.Entries {
+		treeEntry := &n.tree.Entries[i]
+		switch treeEntry.Mode {
+		case filemode.Dir:
+			childTree, err := n.repo.TreeObject(treeEntry.Hash)
+			if err != nil {
+				return nil, fserror.Unexpected(err)
+			}
+			children[treeEntry.Name] = &treeNode{repo: n.repo, tree: childTree}
+
+		case filemode.Regular, filemode.Executable:
+			childFile, err := n.tree.TreeEntryFile(treeEntry)
+			if err != nil {
+				return nil, fserror.Unexpected(err)
+			}
+			children[treeEntry.Name] = &fileNode{file: childFile}
+
+		default:
+			// TODO(josh-newman): Use a logger from gitviewfs.
+			fmt.Fprintf(os.Stderr, "skipping file mode %v: %s\n", treeEntry.Mode, treeEntry.Hash)
+		}
+	}
+	return children, nil
 }
 
-func (n *treeNode) Executable() bool {
-	return false
+type fileNode struct {
+	file *object.File
+}
+
+func (n *fileNode) File() *object.File {
+	return n.file
 }

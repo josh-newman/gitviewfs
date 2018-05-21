@@ -1,6 +1,9 @@
 package fstree
 
-import "github.com/josh-newman/git-view-fs/gitviewfs/fserror"
+import (
+	"github.com/josh-newman/git-view-fs/gitviewfs/fserror"
+	"gopkg.in/src-d/go-git.v4/plumbing/object"
+)
 
 type Node interface{}
 
@@ -11,6 +14,5 @@ type DirNode interface {
 
 type FileNode interface {
 	Node
-	Size() uint64
-	Executable() bool
+	File() *object.File
 }

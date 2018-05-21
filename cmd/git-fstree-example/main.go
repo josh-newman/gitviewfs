@@ -10,6 +10,11 @@ import (
 	"sort"
 	"strings"
 	"fmt"
+	"bufio"
+	"io"
+	"unicode"
+	"gopkg.in/src-d/go-git.v4/plumbing/object"
+	"gopkg.in/src-d/go-git.v4/plumbing/filemode"
 )
 
 func main() {
@@ -58,12 +63,57 @@ func printChildren(node fstree.DirNode, depth int) error {
 				return ferr
 			}
 		case fstree.FileNode:
+			file := child.File()
+			var preview string
+			if isBinary, err := file.IsBinary(); err != nil {
+				log.Fatalf("Unable to test if file %s is binary: %s", file.Hash, err)
+			} else if isBinary {
+				preview = "(binary)"
+			} else {
+				fileHead, err := readBoundedString(file, 40)
+				if err != nil {
+					log.Fatalf("Unable to read head of file %s: %s", file.Hash, err)
+				}
+				preview = fmt.Sprintf(`"%s"`, fileHead)
+			}
 			executableSuffix := ""
-			if child.Executable() {
+			if file.Mode == filemode.Executable {
 				executableSuffix = "*"
 			}
-			fmt.Printf("%s%s%s [%d]\n", indent, name, executableSuffix, child.Size())
+			fmt.Printf("%s%s%s [%d] %s\n", indent, name, executableSuffix, child.File().Size, preview)
 		}
 	}
 	return nil
+}
+
+func readBoundedString(file *object.File, maxLen int) (string, error) {
+	rawReader, err := file.Reader()
+	if err != nil {
+		return "", err
+	}
+	defer rawReader.Close()
+	reader := bufio.NewReader(rawReader)
+	var runes []rune
+	for len(runes) < maxLen + 1 {
+		r, _, err := reader.ReadRune()
+		if err == io.EOF {
+			break
+		} else if err != nil {
+			return "", err
+		}
+		if !unicode.IsPrint(r) {
+			if unicode.IsSpace(r) {
+				r = ' '
+			} else {
+				r = unicode.ReplacementChar
+			}
+		}
+		runes = append(runes, r)
+	}
+	if len(runes) == maxLen + 1 {
+		// The file is longer than maxLen, so we need to abridge.
+		runes = runes[:maxLen]
+		runes[maxLen - 1] = '…'
+	}
+	return string(runes), nil
 }

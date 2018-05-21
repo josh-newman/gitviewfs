@@ -10,6 +10,7 @@ import (
 	"os"
 	"github.com/josh-newman/git-view-fs/gitviewfs/gitfstree"
 	"github.com/josh-newman/git-view-fs/gitviewfs/fstree"
+	"gopkg.in/src-d/go-git.v4/plumbing/filemode"
 )
 
 type gitviewfs struct {
@@ -70,10 +71,10 @@ func (f *gitviewfs) GetAttr(name string, context *fuse.Context) (*fuse.Attr, fus
 		attr.Mode = fuse.S_IFDIR | 0555
 	case fstree.FileNode:
 		attr.Mode = fuse.S_IFREG | 0444
-		if n.Executable() {
+		if n.File().Mode == filemode.Executable {
 			attr.Mode |= 0111
 		}
-		attr.Size = uint64(n.Size())
+		attr.Size = uint64(n.File().Size)
 	default:
 		log.Printf("skipping node: %v", node)
 		return nil, fuse.ENOENT
