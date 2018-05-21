@@ -8,8 +8,8 @@ import (
 	"strings"
 	"io/ioutil"
 	"os"
-	"github.com/josh-newman/git-view-fs/gitviewfs/internal/gitfstree"
-	"github.com/josh-newman/git-view-fs/gitviewfs/internal/fstree"
+	"github.com/josh-newman/git-view-fs/gitviewfs/gitfstree"
+	"github.com/josh-newman/git-view-fs/gitviewfs/fstree"
 )
 
 type gitviewfs struct {

@@ -1,6 +1,6 @@
 package fstree
 
-import "github.com/josh-newman/git-view-fs/gitviewfs/internal/fserror"
+import "github.com/josh-newman/git-view-fs/gitviewfs/fserror"
 
 type Node interface{}
 
