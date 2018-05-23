@@ -61,9 +61,11 @@ func (f *gitviewfs) GetAttr(name string, context *fuse.Context) (*fuse.Attr, fus
 	case fstree.DirNode:
 		attr.Mode = fuse.S_IFDIR | 0555
 	case fstree.FileNode:
-		attr.Mode = fuse.S_IFREG | 0444
-		if n.File().Mode == filemode.Executable {
-			attr.Mode |= 0555
+		if mode := f.computeFuseFileMode(n.File().Mode); mode != 0 {
+			attr.Mode = mode
+		} else {
+			f.logger.Printf("skipping file child: %v", node)
+			return nil, fuse.ENOENT
 		}
 		attr.Size = uint64(n.File().Size)
 	default:
@@ -103,9 +105,10 @@ func (f *gitviewfs) OpenDir(name string, context *fuse.Context) ([]fuse.DirEntry
 		case fstree.DirNode:
 			entry.Mode = fuse.S_IFDIR | 0555
 		case fstree.FileNode:
-			entry.Mode = fuse.S_IFREG | 0444
-			if n.File().Mode == filemode.Executable {
-				entry.Mode |= 0555
+			if mode := f.computeFuseFileMode(n.File().Mode); mode != 0 {
+				entry.Mode = mode
+			} else {
+				f.logger.Printf("skipping file child: %v", node)
 			}
 		default:
 			f.logger.Printf("skipping child: %v", node)
@@ -145,6 +148,57 @@ func (f *gitviewfs) Open(name string, flags uint32, context *fuse.Context) (node
 	}
 
 	return nodefs.NewDataFile(bytes), fuse.OK
+}
+
+func (f *gitviewfs) Readlink(name string, context *fuse.Context) (string, fuse.Status) {
+	node, ferr := f.findNode(name)
+	if ferr != nil {
+		if ferr.UnexpectedErr != nil {
+			f.logger.Printf("unexpected error: %s", ferr.UnexpectedErr)
+		}
+		return "", ferr.Status
+	}
+
+	fileNode, ok := node.(fstree.FileNode)
+	if !ok {
+		f.logger.Printf("expected file node at: %s", name)
+		return "", fuse.EINVAL
+	}
+
+	if fileNode.File().Mode != filemode.Symlink {
+		f.logger.Printf("expected symlink at: %s", name)
+		return "", fuse.EINVAL
+	}
+
+	reader, err := fileNode.File().Reader()
+	if err != nil {
+		f.logger.Printf("error creating file reader: %s", err)
+		return "", fuse.EIO
+	}
+	defer reader.Close()
+
+	bytes, err := ioutil.ReadAll(reader)
+	if err != nil {
+		f.logger.Printf("error reading file: %s", err)
+		return "", fuse.EIO
+	}
+
+	return string(bytes), fuse.OK
+}
+
+// computeFuseFileMode returns the (always non-zero) FUSE-suitable file mode corresponding to the
+// git filemode.FileMode, or 0 indicating we should skip this file.
+func (f *gitviewfs) computeFuseFileMode(mode filemode.FileMode) uint32 {
+	switch mode {
+	case filemode.Regular:
+		return fuse.S_IFREG | 0444
+	case filemode.Symlink:
+		return fuse.S_IFLNK | 0444
+	case filemode.Executable:
+		return fuse.S_IFREG | 0555
+	default:
+		return 0
+	}
 }
 
 func (f *gitviewfs) findNode(name string) (fstree.Node, *fserror.Error) {

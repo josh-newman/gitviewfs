@@ -104,7 +104,7 @@ func (n *treeNode) Children() (map[string]fstree.Node, *fserror.Error) {
 			}
 			children[treeEntry.Name] = &treeNode{repo: n.repo, tree: childTree}
 
-		case filemode.Regular, filemode.Executable:
+		case filemode.Regular, filemode.Executable, filemode.Symlink:
 			childFile, err := n.tree.TreeEntryFile(treeEntry)
 			if err != nil {
 				return nil, fserror.Unexpected(err)
