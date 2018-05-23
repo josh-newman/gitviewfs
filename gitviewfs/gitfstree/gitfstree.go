@@ -1,17 +1,17 @@
 package gitfstree
 
 import (
-	"gopkg.in/src-d/go-git.v4"
-	"github.com/pkg/errors"
-	"io"
+	"fmt"
 	"github.com/josh-newman/git-view-fs/gitviewfs/fserror"
 	"github.com/josh-newman/git-view-fs/gitviewfs/fstree"
-	"gopkg.in/src-d/go-git.v4/plumbing/object"
-	"strings"
+	"github.com/pkg/errors"
+	"gopkg.in/src-d/go-git.v4"
 	"gopkg.in/src-d/go-git.v4/plumbing"
 	"gopkg.in/src-d/go-git.v4/plumbing/filemode"
-	"fmt"
+	"gopkg.in/src-d/go-git.v4/plumbing/object"
+	"io"
 	"os"
+	"strings"
 )
 
 func New(repo *git.Repository) (fstree.Node, error) {
@@ -42,7 +42,7 @@ type branchesNodeEntry struct {
 }
 
 type branchesNode struct {
-	repo *git.Repository
+	repo    *git.Repository
 	entries []branchesNodeEntry
 }
 

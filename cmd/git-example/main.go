@@ -1,18 +1,18 @@
 package main
 
 import (
-	"gopkg.in/src-d/go-git.v4"
-	"log"
-	"github.com/pkg/errors"
-	"io"
-	"fmt"
-	"os"
-	"gopkg.in/src-d/go-git.v4/plumbing"
-	"gopkg.in/src-d/go-git.v4/plumbing/object"
-	"gopkg.in/src-d/go-git.v4/plumbing/filemode"
-	"strings"
-	"path"
 	"bufio"
+	"fmt"
+	"github.com/pkg/errors"
+	"gopkg.in/src-d/go-git.v4"
+	"gopkg.in/src-d/go-git.v4/plumbing"
+	"gopkg.in/src-d/go-git.v4/plumbing/filemode"
+	"gopkg.in/src-d/go-git.v4/plumbing/object"
+	"io"
+	"log"
+	"os"
+	"path"
+	"strings"
 	"unicode"
 )
 
@@ -119,7 +119,7 @@ func getDisplayName(entry *object.TreeEntry, tree *object.Tree) string {
 
 func readBoundedString(reader *bufio.Reader, maxLen int) (string, error) {
 	var runes []rune
-	for len(runes) < maxLen + 1 {
+	for len(runes) < maxLen+1 {
 		r, _, err := reader.ReadRune()
 		if err == io.EOF {
 			break
@@ -135,10 +135,10 @@ func readBoundedString(reader *bufio.Reader, maxLen int) (string, error) {
 		}
 		runes = append(runes, r)
 	}
-	if len(runes) == maxLen + 1 {
+	if len(runes) == maxLen+1 {
 		// The file is longer than maxLen, so we need to abridge.
 		runes = runes[:maxLen]
-		runes[maxLen - 1] = '…'
+		runes[maxLen-1] = '…'
 	}
 	return string(runes), nil
 }

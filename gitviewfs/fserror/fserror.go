@@ -1,8 +1,8 @@
 package fserror
 
 import (
-	"github.com/hanwen/go-fuse/fuse"
 	"fmt"
+	"github.com/hanwen/go-fuse/fuse"
 )
 
 // Error represents either a normal or an unexpected FUSE error.

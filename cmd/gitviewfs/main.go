@@ -1,14 +1,14 @@
 package main
 
 import (
-	"log"
-	"gopkg.in/src-d/go-git.v4"
-	"github.com/pkg/errors"
-	"github.com/josh-newman/git-view-fs/gitviewfs"
-	"github.com/hanwen/go-fuse/fuse/pathfs"
-	"github.com/hanwen/go-fuse/fuse/nodefs"
-	"github.com/hanwen/go-fuse/fuse"
 	"flag"
+	"github.com/hanwen/go-fuse/fuse"
+	"github.com/hanwen/go-fuse/fuse/nodefs"
+	"github.com/hanwen/go-fuse/fuse/pathfs"
+	"github.com/josh-newman/git-view-fs/gitviewfs"
+	"github.com/pkg/errors"
+	"gopkg.in/src-d/go-git.v4"
+	"log"
 )
 
 var debug = flag.Bool("debug", false, "enable debug logging")
@@ -41,8 +41,8 @@ func main() {
 		mountPath,
 		&fuse.MountOptions{
 			FsName: "git:" + repoPath,
-			Name: "gitviewfs",
-			Debug: *debug,
+			Name:   "gitviewfs",
+			Debug:  *debug,
 		},
 	)
 

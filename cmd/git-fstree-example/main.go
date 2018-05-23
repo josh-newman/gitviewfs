@@ -1,20 +1,20 @@
 package main
 
 import (
-	"os"
-	"log"
+	"bufio"
+	"fmt"
+	"github.com/josh-newman/git-view-fs/gitviewfs/fstree"
+	"github.com/josh-newman/git-view-fs/gitviewfs/gitfstree"
 	"github.com/pkg/errors"
 	"gopkg.in/src-d/go-git.v4"
-	"github.com/josh-newman/git-view-fs/gitviewfs/gitfstree"
-	"github.com/josh-newman/git-view-fs/gitviewfs/fstree"
+	"gopkg.in/src-d/go-git.v4/plumbing/filemode"
+	"gopkg.in/src-d/go-git.v4/plumbing/object"
+	"io"
+	"log"
+	"os"
 	"sort"
 	"strings"
-	"fmt"
-	"bufio"
-	"io"
 	"unicode"
-	"gopkg.in/src-d/go-git.v4/plumbing/object"
-	"gopkg.in/src-d/go-git.v4/plumbing/filemode"
 )
 
 func main() {
@@ -58,7 +58,7 @@ func printChildren(node fstree.DirNode, depth int) error {
 		switch child := children[name].(type) {
 		case fstree.DirNode:
 			fmt.Printf("%s%s/\n", indent, name)
-			ferr := printChildren(child, depth + 1)
+			ferr := printChildren(child, depth+1)
 			if ferr != nil {
 				return ferr
 			}
@@ -94,7 +94,7 @@ func readBoundedString(file *object.File, maxLen int) (string, error) {
 	defer rawReader.Close()
 	reader := bufio.NewReader(rawReader)
 	var runes []rune
-	for len(runes) < maxLen + 1 {
+	for len(runes) < maxLen+1 {
 		r, _, err := reader.ReadRune()
 		if err == io.EOF {
 			break
@@ -110,10 +110,10 @@ func readBoundedString(file *object.File, maxLen int) (string, error) {
 		}
 		runes = append(runes, r)
 	}
-	if len(runes) == maxLen + 1 {
+	if len(runes) == maxLen+1 {
 		// The file is longer than maxLen, so we need to abridge.
 		runes = runes[:maxLen]
-		runes[maxLen - 1] = '…'
+		runes[maxLen-1] = '…'
 	}
 	return string(runes), nil
 }

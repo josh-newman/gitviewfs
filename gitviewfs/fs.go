@@ -1,18 +1,18 @@
 package gitviewfs
 
 import (
-	"gopkg.in/src-d/go-git.v4"
-	"github.com/hanwen/go-fuse/fuse/pathfs"
 	"github.com/hanwen/go-fuse/fuse"
-	"log"
-	"strings"
-	"io/ioutil"
-	"os"
-	"github.com/josh-newman/git-view-fs/gitviewfs/gitfstree"
-	"github.com/josh-newman/git-view-fs/gitviewfs/fstree"
-	"gopkg.in/src-d/go-git.v4/plumbing/filemode"
-	"github.com/josh-newman/git-view-fs/gitviewfs/fserror"
 	"github.com/hanwen/go-fuse/fuse/nodefs"
+	"github.com/hanwen/go-fuse/fuse/pathfs"
+	"github.com/josh-newman/git-view-fs/gitviewfs/fserror"
+	"github.com/josh-newman/git-view-fs/gitviewfs/fstree"
+	"github.com/josh-newman/git-view-fs/gitviewfs/gitfstree"
+	"gopkg.in/src-d/go-git.v4"
+	"gopkg.in/src-d/go-git.v4/plumbing/filemode"
+	"io/ioutil"
+	"log"
+	"os"
+	"strings"
 )
 
 type gitviewfs struct {
@@ -29,8 +29,8 @@ func New(repo *git.Repository) (pathfs.FileSystem, error) {
 
 	return &gitviewfs{
 		FileSystem: pathfs.NewDefaultFileSystem(),
-		fstree: tree,
-		logger: log.New(ioutil.Discard, "gitviewfs", log.Ldate | log.Ltime | log.Lmicroseconds | log.Lshortfile | log.LUTC),
+		fstree:     tree,
+		logger:     log.New(ioutil.Discard, "gitviewfs", log.Ldate|log.Ltime|log.Lmicroseconds|log.Lshortfile|log.LUTC),
 	}, nil
 }
 
