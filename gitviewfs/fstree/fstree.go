@@ -1,7 +1,7 @@
 package fstree
 
 import (
-	"github.com/josh-newman/git-view-fs/gitviewfs/fserror"
+	"github.com/josh-newman/gitviewfs/gitviewfs/fserror"
 	"gopkg.in/src-d/go-git.v4/plumbing/object"
 )
 

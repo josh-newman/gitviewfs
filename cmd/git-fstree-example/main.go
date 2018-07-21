@@ -3,8 +3,8 @@ package main
 import (
 	"bufio"
 	"fmt"
-	"github.com/josh-newman/git-view-fs/gitviewfs/fstree"
-	"github.com/josh-newman/git-view-fs/gitviewfs/gitfstree"
+	"github.com/josh-newman/gitviewfs/gitviewfs/fstree"
+	"github.com/josh-newman/gitviewfs/gitviewfs/gitfstree"
 	"github.com/pkg/errors"
 	"gopkg.in/src-d/go-git.v4"
 	"gopkg.in/src-d/go-git.v4/plumbing/filemode"

@@ -2,8 +2,8 @@ package gitfstree
 
 import (
 	"fmt"
-	"github.com/josh-newman/git-view-fs/gitviewfs/fserror"
-	"github.com/josh-newman/git-view-fs/gitviewfs/fstree"
+	"github.com/josh-newman/gitviewfs/gitviewfs/fserror"
+	"github.com/josh-newman/gitviewfs/gitviewfs/fstree"
 	"github.com/pkg/errors"
 	"gopkg.in/src-d/go-git.v4"
 	"gopkg.in/src-d/go-git.v4/plumbing"

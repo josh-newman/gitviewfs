@@ -5,7 +5,7 @@ import (
 	"github.com/hanwen/go-fuse/fuse"
 	"github.com/hanwen/go-fuse/fuse/nodefs"
 	"github.com/hanwen/go-fuse/fuse/pathfs"
-	"github.com/josh-newman/git-view-fs/gitviewfs"
+	"github.com/josh-newman/gitviewfs/gitviewfs"
 	"github.com/pkg/errors"
 	"gopkg.in/src-d/go-git.v4"
 	"log"
