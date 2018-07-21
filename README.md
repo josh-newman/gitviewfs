@@ -24,13 +24,13 @@ $ mkdir /tmp/view
 
 $ gitviewfs /tmp/view $GOPATH/src/github.com/josh-newman/gitviewfs &
 
-$ $ find /tmp/view -maxdepth 3
-  /tmp/view
-  /tmp/view/refs
-  /tmp/view/refs/heads
-  /tmp/view/refs/heads/master
-  /tmp/view/refs/remotes
-  /tmp/view/refs/remotes/origin
+$ find /tmp/view -maxdepth 3
+/tmp/view
+/tmp/view/refs
+/tmp/view/refs/heads
+/tmp/view/refs/heads/master
+/tmp/view/refs/remotes
+/tmp/view/refs/remotes/origin
 
 $ head -n 1 /tmp/view/refs/heads/master/README.md
 # gitviewfs
