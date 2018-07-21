@@ -9,28 +9,25 @@ import (
 	"gopkg.in/src-d/go-git.v4/plumbing"
 	"gopkg.in/src-d/go-git.v4/plumbing/filemode"
 	"gopkg.in/src-d/go-git.v4/plumbing/object"
-	"io"
 	"os"
 	"strings"
 )
 
 func New(repo *git.Repository) (fstree.Node, error) {
 	branchRefs, err := repo.Branches()
+	defer branchRefs.Close()
 	if err != nil {
 		return nil, errors.Wrap(err, "list branches failed")
 	}
 
 	node := branchesNode{repo: repo}
-	for {
-		branchRef, err := branchRefs.Next()
-		if err == io.EOF {
-			break
-		} else if err != nil {
-			return nil, fserror.Unexpected(errors.Wrap(err, "next branch failed"))
-		}
-
+	err = branchRefs.ForEach(func(branchRef *plumbing.Reference) error {
 		nameParts := strings.Split(string(branchRef.Name()), "/")
 		node.entries = append(node.entries, branchesNodeEntry{nameParts: nameParts, branchRef: branchRef})
+		return nil
+	})
+	if err != nil {
+		return nil, fserror.Unexpected(errors.Wrap(err, "next branch failed"))
 	}
 
 	return &node, nil
