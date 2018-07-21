@@ -22,9 +22,6 @@ func New(repo *git.Repository) (fstree.Node, error) {
 
 	node := referencesNode{repo: repo}
 	err = refs.ForEach(func(ref *plumbing.Reference) error {
-		if ref.Name() == plumbing.HEAD {
-			return nil
-		}
 		nameParts := strings.Split(string(ref.Name()), "/")
 		node.entries = append(node.entries, referencesNodeEntry{nameParts: nameParts, ref: ref})
 		return nil
@@ -54,7 +51,13 @@ func (n *referencesNode) Children() (map[string]fstree.Node, *fserror.Error) {
 			return nil, fserror.Unexpected(errors.Errorf("unexpected ref name: %s", entry.ref.Name()))
 
 		case 1:
-			refCommit, err := n.repo.CommitObject(entry.ref.Hash())
+			hash := entry.ref.Hash()
+			if hash == plumbing.ZeroHash {
+				// HEAD references (in refs/heads/* and refs/remotes/.../*) seem to be listed with hash
+				// zero, so we skip them.
+				continue
+			}
+			refCommit, err := n.repo.CommitObject(hash)
 			if err == plumbing.ErrObjectNotFound {
 				return nil, fserror.Unexpected(errors.Errorf("Ref name %s points to invalid or non-commit ref %s", entry.ref.Name(), entry.ref.Hash()))
 			} else if err != nil {
