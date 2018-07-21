@@ -5,6 +5,7 @@ import (
 	"github.com/hanwen/go-fuse/fuse/nodefs"
 	"github.com/josh-newman/gitviewfs/gitviewfs/fstree"
 	"io"
+	"io/ioutil"
 	"log"
 )
 
@@ -33,9 +34,8 @@ func (f *file) Read(dest []byte, off int64) (fuse.ReadResult, fuse.Status) {
 	// Seek to requested offset by reading and discarding.
 	// TODO(josh-newman): Seek more efficiently? Avoid O(n^2) reading across multiple requests.
 	for off > 0 {
-		discard := dest[:off]
-		read, err := reader.Read(discard)
-		off -= int64(read)
+		nDiscarded, err := io.CopyN(ioutil.Discard, reader, off)
+		off -= nDiscarded
 		if err == io.EOF {
 			off = 0
 		} else if err != nil {
@@ -44,8 +44,8 @@ func (f *file) Read(dest []byte, off int64) (fuse.ReadResult, fuse.Status) {
 		}
 	}
 
-	read, err := reader.Read(dest)
-	dest = dest[:read]
+	nRead, err := reader.Read(dest)
+	dest = dest[:nRead]
 	if err != nil {
 		f.logger.Printf("error reading file: %s", err)
 		return nil, fuse.EIO
