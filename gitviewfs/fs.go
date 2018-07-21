@@ -61,13 +61,10 @@ func (f *gitviewfs) GetAttr(name string, context *fuse.Context) (*fuse.Attr, fus
 	case fstree.DirNode:
 		attr.Mode = fuse.S_IFDIR | 0555
 	case fstree.FileNode:
-		if mode := f.computeFuseFileMode(n.File().Mode); mode != 0 {
-			attr.Mode = mode
-		} else {
-			f.logger.Printf("skipping file child: %v", node)
-			return nil, fuse.ENOENT
+		file := newFile(n, f.logger)
+		if status := file.GetAttr(&attr); status != fuse.OK {
+			return nil, status
 		}
-		attr.Size = uint64(n.File().Size)
 	default:
 		f.logger.Printf("skipping node: %v", node)
 		return nil, fuse.ENOENT
@@ -105,7 +102,7 @@ func (f *gitviewfs) OpenDir(name string, context *fuse.Context) ([]fuse.DirEntry
 		case fstree.DirNode:
 			entry.Mode = fuse.S_IFDIR | 0555
 		case fstree.FileNode:
-			if mode := f.computeFuseFileMode(n.File().Mode); mode != 0 {
+			if mode := computeFuseFileMode(n.File().Mode); mode != 0 {
 				entry.Mode = mode
 			} else {
 				f.logger.Printf("skipping file child: %v", node)
@@ -133,21 +130,7 @@ func (f *gitviewfs) Open(name string, flags uint32, context *fuse.Context) (node
 		return nil, fuse.EINVAL
 	}
 
-	// TODO(josh-newman): Read efficiently instead of copying the whole file into memory.
-	reader, err := fileNode.File().Reader()
-	if err != nil {
-		f.logger.Printf("error creating file reader: %s", err)
-		return nil, fuse.EIO
-	}
-	defer reader.Close()
-
-	bytes, err := ioutil.ReadAll(reader)
-	if err != nil {
-		f.logger.Printf("error reading file: %s", err)
-		return nil, fuse.EIO
-	}
-
-	return nodefs.NewDataFile(bytes), fuse.OK
+	return newFile(fileNode, f.logger), fuse.OK
 }
 
 func (f *gitviewfs) Readlink(name string, context *fuse.Context) (string, fuse.Status) {
@@ -188,7 +171,7 @@ func (f *gitviewfs) Readlink(name string, context *fuse.Context) (string, fuse.S
 
 // computeFuseFileMode returns the (always non-zero) FUSE-suitable file mode corresponding to the
 // git filemode.FileMode, or 0 indicating we should skip this file.
-func (f *gitviewfs) computeFuseFileMode(mode filemode.FileMode) uint32 {
+func computeFuseFileMode(mode filemode.FileMode) uint32 {
 	switch mode {
 	case filemode.Regular:
 		return fuse.S_IFREG | 0444
